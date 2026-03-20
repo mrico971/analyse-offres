@@ -1,1 +1,1067 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vérificateur de Prix Unitaires — DPGF</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bleu:     #1F3864;
+      --bleu2:    #2E75B6;
+      --bleu3:    #D6E4F0;
+      --orange:   #C55A11;
+      --vert:     #1e7e34;
+      --vert-bg:  #d4edda;
+      --orange-bg:#fff3cd;
+      --rouge-bg: #f8d7da;
+      --gris:     #f4f6f9;
+      --gris2:    #e2e8f0;
+      --blanc:    #ffffff;
+      --texte:    #1e293b;
+      --texte2:   #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--gris);
+      color: var(--texte);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--bleu);
+      padding: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .header-icon {
+      background: var(--orange);
+      border-radius: 10px;
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+    .header-title h1 {
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .header-title p {
+      color: var(--bleu3);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+    .header-badge {
+      margin-left: auto;
+      background: var(--orange);
+      color: #fff;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ── MAIN ── */
+    main {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--blanc);
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+    .card-header {
+      background: var(--bleu);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-header.orange { background: var(--orange); }
+    .card-header.bleu2  { background: var(--bleu2); }
+    .card-header.vert   { background: var(--vert); }
+    .step-badge {
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .card-header h2 {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .card-body { padding: 24px; }
+
+    /* ── FORMULAIRE PROJET ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--bleu);
+    }
+    .form-group input, .form-group select {
+      border: 1.5px solid var(--gris2);
+      border-radius: 7px;
+      padding: 9px 12px;
+      font-size: 14px;
+      color: var(--texte);
+      transition: border-color 0.2s;
+      background: var(--gris);
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--bleu2);
+      background: #fff;
+    }
+
+    /* ── SEUILS ── */
+    .seuils-row {
+      display: flex;
+      gap: 20px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .seuil-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--gris);
+      border-radius: 8px;
+      padding: 10px 16px;
+      flex: 1;
+      min-width: 200px;
+    }
+    .seuil-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .seuil-item label { font-size: 13px; font-weight: 600; flex: 1; }
+    .seuil-item input {
+      width: 60px;
+      border: 1.5px solid var(--gris2);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 13px;
+      text-align: center;
+    }
+    .seuil-item span { font-size: 13px; color: var(--texte2); }
+
+    /* ── IMPORT FICHIERS ── */
+    .import-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .import-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--gris);
+      border-radius: 10px;
+      padding: 14px 18px;
+      border: 2px dashed var(--gris2);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .import-row.loaded {
+      border-color: var(--vert);
+      background: var(--vert-bg);
+      border-style: solid;
+    }
+    .import-row.error {
+      border-color: #dc3545;
+      background: var(--rouge-bg);
+      border-style: solid;
+    }
+    .import-icon {
+      font-size: 26px; flex-shrink: 0;
+    }
+    .import-info { flex: 1; }
+    .import-info strong {
+      display: block;
+      font-size: 14px;
+      color: var(--bleu);
+      margin-bottom: 2px;
+    }
+    .import-info span {
+      font-size: 12px;
+      color: var(--texte2);
+    }
+    .import-status {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+    .import-status.ok   { background: var(--vert-bg); color: var(--vert); }
+    .import-status.wait { background: var(--gris2); color: var(--texte2); }
+    .import-status.err  { background: var(--rouge-bg); color: #dc3545; }
+
+    .btn-import {
+      background: var(--bleu2);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-import:hover { background: var(--bleu); }
+
+    .entreprises-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .entreprise-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--gris);
+      border-radius: 10px;
+      padding: 12px 16px;
+      border: 2px dashed var(--gris2);
+      transition: all 0.2s;
+    }
+    .entreprise-row.loaded {
+      border-color: var(--bleu2);
+      background: var(--bleu3);
+      border-style: solid;
+    }
+    .entreprise-name-input {
+      flex: 1;
+      border: 1.5px solid var(--gris2);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+      background: #fff;
+    }
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #dc3545;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .btn-remove:hover { background: var(--rouge-bg); }
+
+    .btn-add-ent {
+      background: none;
+      border: 2px dashed var(--bleu2);
+      color: var(--bleu2);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+      margin-top: 4px;
+    }
+    .btn-add-ent:hover { background: var(--bleu3); }
+
+    /* ── BOUTON LANCER ── */
+    .btn-lancer {
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 16px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px rgba(197,90,17,0.3);
+    }
+    .btn-lancer:hover  { background: #a34a0e; transform: translateY(-1px); }
+    .btn-lancer:active { transform: translateY(0); }
+    .btn-lancer:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; transform: none; }
+
+    /* ── RÉSULTATS ── */
+    #section-resultats { display: none; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--gris);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      border-left: 4px solid var(--gris2);
+    }
+    .stat-card.vert   { border-color: var(--vert);   background: var(--vert-bg); }
+    .stat-card.orange { border-color: #fd7e14; background: var(--orange-bg); }
+    .stat-card.rouge  { border-color: #dc3545; background: var(--rouge-bg); }
+    .stat-card.bleu   { border-color: var(--bleu2);  background: var(--bleu3); }
+    .stat-number {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-card.vert   .stat-number { color: var(--vert); }
+    .stat-card.orange .stat-number { color: #fd7e14; }
+    .stat-card.rouge  .stat-number { color: #dc3545; }
+    .stat-card.bleu   .stat-number { color: var(--bleu2); }
+    .stat-label { font-size: 12px; color: var(--texte2); font-weight: 600; }
+
+    /* ── FILTRES ── */
+    .filtres-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .btn-filtre {
+      background: var(--gris);
+      border: 1.5px solid var(--gris2);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .btn-filtre.actif, .btn-filtre:hover { background: var(--bleu2); color: #fff; border-color: var(--bleu2); }
+    .btn-filtre.vert.actif  { background: var(--vert);  border-color: var(--vert); }
+    .btn-filtre.orange.actif{ background: #fd7e14; border-color: #fd7e14; }
+    .btn-filtre.rouge.actif { background: #dc3545; border-color: #dc3545; }
+
+    /* ── TABLEAU ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--gris2);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      background: var(--bleu);
+      color: #fff;
+      padding: 11px 12px;
+      text-align: center;
+      font-weight: 600;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+    }
+    thead th:nth-child(2) { text-align: left; }
+    tbody tr:nth-child(even) { background: var(--gris); }
+    tbody tr:hover { background: var(--bleu3); }
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--gris2);
+      text-align: center;
+      vertical-align: middle;
+    }
+    td:nth-child(2) { text-align: left; }
+
+    tr.chapitre td {
+      background: var(--bleu) !important;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    tr.sous-chapitre td {
+      background: var(--bleu3) !important;
+      color: var(--bleu);
+      font-weight: 600;
+      font-style: italic;
+    }
+
+    .badge-ecart {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-vert   { background: var(--vert-bg);   color: var(--vert); }
+    .badge-orange { background: var(--orange-bg);  color: #856404; }
+    .badge-rouge  { background: var(--rouge-bg);   color: #721c24; }
+    .badge-grey   { background: var(--gris2);      color: var(--texte2); }
+
+    /* ── EXPORT ── */
+    .export-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .btn-export {
+      background: var(--bleu);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .btn-export:hover { background: var(--bleu2); }
+    .btn-export.orange { background: var(--orange); }
+    .btn-export.orange:hover { background: #a34a0e; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--texte2);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--texte2);
+      font-size: 12px;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--bleu);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      max-width: 320px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { background: var(--vert); }
+    #toast.error   { background: #dc3545; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="header-inner">
+    <div class="header-icon">🏗️</div>
+    <div class="header-title">
+      <h1>Vérificateur de Prix Unitaires — DPGF</h1>
+      <p>Comparaison automatique des offres par rapport à l'estimation DCE</p>
+    </div>
+    <div class="header-badge">Économie de la construction</div>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
+<main>
+
+  <!-- ÉTAPE 1 : Infos projet -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge">1</div>
+      <h2>Informations du projet</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nom de l'opération</label>
+          <input type="text" id="nom-projet" placeholder="Ex : Construction d'un gymnase"/>
+        </div>
+        <div class="form-group">
+          <label>Maître d'ouvrage</label>
+          <input type="text" id="moa" placeholder="Ex : Commune de..."/>
+        </div>
+        <div class="form-group">
+          <label>Lot analysé</label>
+          <input type="text" id="lot" placeholder="Ex : Lot 2 — Gros Œuvre"/>
+        </div>
+        <div class="form-group">
+          <label>Date d'analyse</label>
+          <input type="date" id="date-analyse"/>
+        </div>
+      </div>
+
+      <!-- Seuils -->
+      <div style="margin-top:20px;">
+        <label style="font-size:13px;font-weight:600;color:var(--bleu);display:block;margin-bottom:10px;">
+          ⚙️ Seuils d'alerte (écart % par rapport à l'estimation DCE)
+        </label>
+        <div class="seuils-row">
+          <div class="seuil-item">
+            <div class="seuil-dot" style="background:#fd7e14;"></div>
+            <label>Seuil orange</label>
+            <input type="number" id="seuil-orange" value="10" min="1" max="100"/>
+            <span>%</span>
+          </div>
+          <div class="seuil-item">
+            <div class="seuil-dot" style="background:#dc3545;"></div>
+            <label>Seuil rouge</label>
+            <input type="number" id="seuil-rouge" value="20" min="1" max="100"/>
+            <span>%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 2 : Import fichiers -->
+  <div class="card">
+    <div class="card-header bleu2">
+      <div class="step-badge">2</div>
+      <h2>Importer les fichiers DPGF</h2>
+    </div>
+    <div class="card-body">
+      <div class="import-grid">
+
+        <!-- DCE -->
+        <div class="import-row" id="row-dce">
+          <div class="import-icon">📐</div>
+          <div class="import-info">
+            <strong>Estimation DCE (référence MOE)</strong>
+            <span id="status-dce-text">Aucun fichier chargé — Format .xlsx attendu</span>
+          </div>
+          <span class="import-status wait" id="badge-dce">En attente</span>
+          <label class="btn-import">
+            📂 Choisir
+            <input type="file" accept=".xlsx,.xls" id="file-dce" class="hidden" onchange="loadDCE(this)"/>
+          </label>
+        </div>
+
+        <!-- Entreprises -->
+        <div style="margin-top:8px;">
+          <label style="font-size:13px;font-weight:600;color:var(--bleu);display:block;margin-bottom:10px;">
+            🏢 DPGF des entreprises soumissionnaires
+          </label>
+          <div class="entreprises-list" id="entreprises-list"></div>
+          <button class="btn-add-ent" onclick="ajouterEntreprise()">
+            ＋ Ajouter une entreprise
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Aide colonnes -->
+      <div style="margin-top:20px;background:var(--bleu3);border-radius:8px;padding:14px 18px;">
+        <p style="font-size:13px;color:var(--bleu);font-weight:600;margin-bottom:6px;">
+          ℹ️ Format attendu pour les fichiers Excel
+        </p>
+        <p style="font-size:12px;color:var(--texte2);line-height:1.6;">
+          Les fichiers doivent contenir ces colonnes dans cet ordre :
+          <strong>N° Poste</strong> · <strong>Désignation</strong> · <strong>Unité</strong> · <strong>Quantité</strong> · <strong>Prix Unitaire HT</strong> · <strong>Montant HT</strong><br/>
+          Les lignes de chapitres (ex : <em>1. Gros Œuvre</em>) sont détectées automatiquement.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 3 : Lancer -->
+  <div class="card">
+    <div class="card-header orange">
+      <div class="step-badge">3</div>
+      <h2>Lancer l'analyse</h2>
+    </div>
+    <div class="card-body">
+      <button class="btn-lancer" id="btn-lancer" onclick="lancerAnalyse()">
+        ▶ Lancer la comparaison des prix unitaires
+      </button>
+    </div>
+  </div>
+
+  <!-- RÉSULTATS -->
+  <div id="section-resultats">
+    <div class="card">
+      <div class="card-header vert">
+        <div class="step-badge">✓</div>
+        <h2>Résultats de l'analyse</h2>
+      </div>
+      <div class="card-body">
+
+        <!-- Stats -->
+        <div class="stats-row" id="stats-row"></div>
+
+        <!-- Filtres -->
+        <div class="filtres-row">
+          <button class="btn-filtre actif" onclick="filtrer('tous', this)">Tous les postes</button>
+          <button class="btn-filtre vert"   onclick="filtrer('vert', this)">✅ Conformes</button>
+          <button class="btn-filtre orange" onclick="filtrer('orange', this)">🟡 À surveiller</button>
+          <button class="btn-filtre rouge"  onclick="filtrer('rouge', this)">🔴 En alerte</button>
+        </div>
+
+        <!-- Tableau -->
+        <div class="table-wrap">
+          <table id="tableau-resultats">
+            <thead id="thead-resultats"></thead>
+            <tbody id="tbody-resultats"></tbody>
+          </table>
+        </div>
+
+        <!-- Export -->
+        <div class="export-row">
+          <button class="btn-export" onclick="exporterExcel()">
+            📥 Exporter le rapport Excel
+          </button>
+          <button class="btn-export orange" onclick="exporterAlertes()">
+            🚨 Exporter les alertes uniquement
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Projet de fin d'études — Économie de la construction · BUT GCCD · mrico971
+</footer>
+
+<div id="toast"></div>
+
+<!-- ══ SCRIPT ══ -->
+<script>
+// ── État global ──────────────────────────────────────────────
+const state = {
+  dce: null,
+  entreprises: [],
+  resultats: [],
+  filtreActif: 'tous'
+};
+
+let entrepriseCount = 0;
+
+// ── Toast ────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ── Ajouter une entreprise ───────────────────────────────────
+function ajouterEntreprise() {
+  entrepriseCount++;
+  const id = entrepriseCount;
+  const list = document.getElementById('entreprises-list');
+
+  const div = document.createElement('div');
+  div.className = 'entreprise-row';
+  div.id = `ent-row-${id}`;
+  div.innerHTML = `
+    <div style="font-size:22px;">🏢</div>
+    <input type="text" class="entreprise-name-input" id="ent-name-${id}"
+      placeholder="Nom de l'entreprise ${id}" value="Entreprise ${id}"/>
+    <span class="import-status wait" id="ent-badge-${id}">En attente</span>
+    <label class="btn-import">
+      📂 Choisir
+      <input type="file" accept=".xlsx,.xls" id="ent-file-${id}" class="hidden"
+        onchange="loadEntreprise(this, ${id})"/>
+    </label>
+    <button class="btn-remove" onclick="supprimerEntreprise(${id})" title="Supprimer">✕</button>
+  `;
+  list.appendChild(div);
+  state.entreprises.push({ id, nom: `Entreprise ${id}`, data: null });
+}
+
+function supprimerEntreprise(id) {
+  document.getElementById(`ent-row-${id}`)?.remove();
+  state.entreprises = state.entreprises.filter(e => e.id !== id);
+}
+
+// ── Lire un fichier Excel ────────────────────────────────────
+function lireExcel(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        resolve(data);
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsBinaryString(file);
+  });
+}
+
+// ── Détecter la ligne d'en-tête ─────────────────────────────
+function detecterHeader(data) {
+  for (let i = 0; i < Math.min(10, data.length); i++) {
+    const row = data[i].map(c => String(c).toLowerCase());
+    if (row.some(c => c.includes('désign') || c.includes('design') || c.includes('libellé'))) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+// ── Parser une feuille DPGF ──────────────────────────────────
+function parserDPGF(data) {
+  const headerIdx = detecterHeader(data);
+  const rows = data.slice(headerIdx + 1);
+  const postes = [];
+
+  for (const row of rows) {
+    if (row.every(c => c === '' || c === null || c === undefined)) continue;
+
+    const num   = String(row[0] ?? '').trim();
+    const desig = String(row[1] ?? '').trim();
+    const unite = String(row[2] ?? '').trim();
+    const qte   = parseFloat(String(row[3]).replace(',', '.')) || null;
+    const pu    = parseFloat(String(row[4]).replace(',', '.')) || null;
+    const mt    = parseFloat(String(row[5]).replace(',', '.')) || null;
+
+    if (!desig && !num) continue;
+
+    const points = (num.match(/\./g) || []).length;
+    let type = 'poste';
+    if (num === '' || points === 0 && pu === null) type = 'chapitre';
+    else if (points === 1 && pu === null) type = 'sous-chapitre';
+
+    postes.push({ num, desig, unite, qte, pu, mt, type });
+  }
+  return postes;
+}
+
+// ── Charger DCE ──────────────────────────────────────────────
+async function loadDCE(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  try {
+    const data = await lireExcel(file);
+    state.dce = parserDPGF(data);
+    document.getElementById('row-dce').className = 'import-row loaded';
+    document.getElementById('badge-dce').textContent = `✅ ${state.dce.length} lignes`;
+    document.getElementById('badge-dce').className = 'import-status ok';
+    document.getElementById('status-dce-text').textContent =
+      `${file.name} — ${state.dce.filter(p => p.type === 'poste').length} postes détectés`;
+    toast(`DCE chargé : ${state.dce.filter(p=>p.type==='poste').length} postes`, 'success');
+  } catch(e) {
+    document.getElementById('badge-dce').textContent = '❌ Erreur';
+    document.getElementById('badge-dce').className = 'import-status err';
+    toast('Erreur lors de la lecture du fichier DCE', 'error');
+  }
+}
+
+// ── Charger Entreprise ───────────────────────────────────────
+async function loadEntreprise(input, id) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const nom = document.getElementById(`ent-name-${id}`)?.value || `Entreprise ${id}`;
+  try {
+    const data = await lireExcel(file);
+    const postes = parserDPGF(data);
+    const ent = state.entreprises.find(e => e.id === id);
+    if (ent) { ent.data = postes; ent.nom = nom; }
+
+    const row = document.getElementById(`ent-row-${id}`);
+    if (row) row.className = 'entreprise-row loaded';
+    const badge = document.getElementById(`ent-badge-${id}`);
+    if (badge) {
+      badge.textContent = `✅ ${postes.filter(p=>p.type==='poste').length} postes`;
+      badge.className = 'import-status ok';
+    }
+    toast(`${nom} chargée`, 'success');
+  } catch(e) {
+    const badge = document.getElementById(`ent-badge-${id}`);
+    if (badge) { badge.textContent = '❌ Erreur'; badge.className = 'import-status err'; }
+    toast(`Erreur lors du chargement de ${nom}`, 'error');
+  }
+}
+
+// ── Lancer l'analyse ─────────────────────────────────────────
+function lancerAnalyse() {
+  if (!state.dce) { toast('Veuillez d\'abord charger l\'estimation DCE', 'error'); return; }
+  const entsChargees = state.entreprises.filter(e => e.data);
+  if (!entsChargees.length) { toast('Veuillez charger au moins une DPGF entreprise', 'error'); return; }
+
+  const seuilOrange = parseFloat(document.getElementById('seuil-orange').value) / 100;
+  const seuilRouge  = parseFloat(document.getElementById('seuil-rouge').value)  / 100;
+
+  // Construire index DCE par numéro de poste
+  const indexDCE = {};
+  for (const p of state.dce) { if (p.num) indexDCE[p.num] = p; }
+
+  // Construire résultats
+  const resultats = [];
+  for (const poste of state.dce) {
+    const ligne = { ...poste, comparaisons: [] };
+
+    if (poste.type === 'poste') {
+      for (const ent of entsChargees) {
+        const entPoste = ent.data.find(p => p.num === poste.num);
+        const puEnt = entPoste?.pu ?? null;
+        let ecart = null, niveau = 'grey';
+
+        if (puEnt !== null && poste.pu) {
+          ecart = (puEnt - poste.pu) / poste.pu;
+          if      (Math.abs(ecart) >= seuilRouge)  niveau = 'rouge';
+          else if (Math.abs(ecart) >= seuilOrange) niveau = 'orange';
+          else                                      niveau = 'vert';
+        }
+        ligne.comparaisons.push({ nom: ent.nom, pu: puEnt, ecart, niveau });
+      }
+    }
+    resultats.push(ligne);
+  }
+
+  state.resultats = resultats;
+  afficherResultats(resultats, entsChargees);
+  document.getElementById('section-resultats').style.display = 'block';
+  document.getElementById('section-resultats').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toast('Analyse terminée !', 'success');
+}
+
+// ── Afficher les résultats ───────────────────────────────────
+function afficherResultats(resultats, ents) {
+  const postes = resultats.filter(r => r.type === 'poste');
+
+  let nbVert = 0, nbOrange = 0, nbRouge = 0;
+  for (const p of postes) {
+    for (const c of p.comparaisons) {
+      if (c.niveau === 'vert')   nbVert++;
+      if (c.niveau === 'orange') nbOrange++;
+      if (c.niveau === 'rouge')  nbRouge++;
+    }
+  }
+
+  // Stats
+  const statsRow = document.getElementById('stats-row');
+  statsRow.innerHTML = `
+    <div class="stat-card bleu">
+      <div class="stat-number">${postes.length}</div>
+      <div class="stat-label">Postes analysés</div>
+    </div>
+    <div class="stat-card vert">
+      <div class="stat-number">${nbVert}</div>
+      <div class="stat-label">✅ Conformes</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-number">${nbOrange}</div>
+      <div class="stat-label">🟡 À surveiller</div>
+    </div>
+    <div class="stat-card rouge">
+      <div class="stat-number">${nbRouge}</div>
+      <div class="stat-label">🔴 En alerte</div>
+    </div>
+    <div class="stat-card bleu">
+      <div class="stat-number">${ents.length}</div>
+      <div class="stat-label">Entreprises</div>
+    </div>
+  `;
+
+  // En-têtes tableau
+  const thead = document.getElementById('thead-resultats');
+  let thHtml = `<tr>
+    <th>N° Poste</th>
+    <th>Désignation</th>
+    <th>Unité</th>
+    <th>PU DCE (€)</th>`;
+  for (const e of ents) {
+    thHtml += `<th>${e.nom}<br/><span style="font-weight:400;font-size:11px;">PU HT (€)</span></th>
+               <th>${e.nom}<br/><span style="font-weight:400;font-size:11px;">Écart %</span></th>`;
+  }
+  thHtml += '</tr>';
+  thead.innerHTML = thHtml;
+
+  // Corps tableau
+  renderTableau(resultats, 'tous');
+}
+
+// ── Rendu du tableau ─────────────────────────────────────────
+function renderTableau(resultats, filtre) {
+  const tbody = document.getElementById('tbody-resultats');
+  let html = '';
+
+  for (const r of resultats) {
+    if (r.type === 'chapitre') {
+      html += `<tr class="chapitre">
+        <td>${r.num}</td>
+        <td colspan="20">${r.desig}</td>
+      </tr>`;
+      continue;
+    }
+    if (r.type === 'sous-chapitre') {
+      html += `<tr class="sous-chapitre">
+        <td>${r.num}</td>
+        <td colspan="20">${r.desig}</td>
+      </tr>`;
+      continue;
+    }
+
+    // Filtre
+    if (filtre !== 'tous') {
+      const match = r.comparaisons.some(c => c.niveau === filtre);
+      if (!match) continue;
+    }
+
+    const puDce = r.pu ? r.pu.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €' : '—';
+    let tds = `<td style="font-weight:600;color:var(--bleu)">${r.num}</td>
+               <td>${r.desig}</td>
+               <td style="color:var(--texte2)">${r.unite}</td>
+               <td style="font-weight:600">${puDce}</td>`;
+
+    for (const c of r.comparaisons) {
+      const puEnt = c.pu ? c.pu.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €' : '—';
+      const ecartStr = c.ecart !== null
+        ? (c.ecart >= 0 ? '+' : '') + (c.ecart * 100).toFixed(1) + ' %'
+        : '—';
+      const badgeClass = c.ecart !== null ? `badge-ecart badge-${c.niveau}` : 'badge-ecart badge-grey';
+      tds += `<td>${puEnt}</td>
+              <td><span class="${badgeClass}">${ecartStr}</span></td>`;
+    }
+    html += `<tr>${tds}</tr>`;
+  }
+
+  tbody.innerHTML = html || `<tr><td colspan="20" style="text-align:center;padding:32px;color:var(--texte2)">
+    Aucun poste à afficher pour ce filtre.</td></tr>`;
+}
+
+// ── Filtres ──────────────────────────────────────────────────
+function filtrer(filtre, btn) {
+  state.filtreActif = filtre;
+  document.querySelectorAll('.btn-filtre').forEach(b => b.classList.remove('actif'));
+  btn.classList.add('actif');
+  renderTableau(state.resultats, filtre);
+}
+
+// ── Export Excel ─────────────────────────────────────────────
+function exporterExcel() {
+  if (!state.resultats.length) { toast('Aucun résultat à exporter', 'error'); return; }
+  const ents = state.entreprises.filter(e => e.data);
+  const wb = XLSX.utils.book_new();
+
+  // Feuille résultats
+  const rows = [];
+  const header = ['N° Poste', 'Désignation', 'Unité', 'Qté', 'PU DCE (€)'];
+  for (const e of ents) { header.push(`PU ${e.nom} (€)`, `Écart % ${e.nom}`); }
+  rows.push(header);
+
+  for (const r of state.resultats) {
+    const row = [r.num, r.desig, r.unite, r.qte ?? '', r.pu ?? ''];
+    if (r.type === 'poste') {
+      for (const c of r.comparaisons) {
+        row.push(c.pu ?? '');
+        row.push(c.ecart !== null ? parseFloat((c.ecart * 100).toFixed(2)) : '');
+      }
+    }
+    rows.push(row);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 8 }, { wch: 10 }, { wch: 14 },
+    ...ents.flatMap(() => [{ wch: 14 }, { wch: 12 }])];
+  XLSX.utils.book_append_sheet(wb, ws, 'Comparaison');
+
+  // Feuille infos
+  const infos = [
+    ['Projet', document.getElementById('nom-projet').value],
+    ['MOA', document.getElementById('moa').value],
+    ['Lot', document.getElementById('lot').value],
+    ['Date', document.getElementById('date-analyse').value],
+    ['Seuil orange', document.getElementById('seuil-orange').value + ' %'],
+    ['Seuil rouge',  document.getElementById('seuil-rouge').value  + ' %'],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(infos), 'Infos projet');
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `Analyse_DPGF_${date}.xlsx`);
+  toast('Export Excel généré !', 'success');
+}
+
+function exporterAlertes() {
+  if (!state.resultats.length) { toast('Aucun résultat à exporter', 'error'); return; }
+  const ents = state.entreprises.filter(e => e.data);
+  const wb = XLSX.utils.book_new();
+  const rows = [['N° Poste', 'Désignation', 'Unité', 'PU DCE (€)', 'Entreprise', 'PU Entreprise (€)', 'Écart %', 'Niveau']];
+
+  for (const r of state.resultats) {
+    if (r.type !== 'poste') continue;
+    for (const c of r.comparaisons) {
+      if (c.niveau === 'orange' || c.niveau === 'rouge') {
+        rows.push([r.num, r.desig, r.unite, r.pu ?? '',
+          c.nom, c.pu ?? '',
+          c.ecart !== null ? parseFloat((c.ecart * 100).toFixed(2)) : '',
+          c.niveau === 'rouge' ? '🔴 Alerte' : '🟡 À surveiller'
+        ]);
+      }
+    }
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 8 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 10 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Alertes');
+  XLSX.writeFile(wb, `Alertes_DPGF_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Export alertes généré !', 'success');
+}
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('date-analyse').value = new Date().toISOString().slice(0, 10);
+  ajouterEntreprise();
+  ajouterEntreprise();
+});
+</script>
+
+</body>
+</html>
 
