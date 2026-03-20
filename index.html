@@ -753,7 +753,17 @@ function detecterHeader(data) {
   }
   return 0;
 }
-
+function parseNombre(val) {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return val;
+  const str = String(val)
+    .trim()
+    .replace(/\s/g, '')        // supprime les espaces (séparateurs milliers)
+    .replace(/\u00a0/g, '')    // supprime les espaces insécables
+    .replace(',', '.');        // virgule → point
+  const n = parseFloat(str);
+  return isNaN(n) ? null : n;
+}
 // ── Parser une feuille DPGF ──────────────────────────────────
 function parserDPGF(data) {
   const headerIdx = detecterHeader(data);
@@ -766,10 +776,9 @@ function parserDPGF(data) {
     const num   = String(row[0] ?? '').trim();
     const desig = String(row[1] ?? '').trim();
     const unite = String(row[2] ?? '').trim();
-    const qte   = parseFloat(String(row[3]).replace(',', '.')) || null;
-    const pu    = parseFloat(String(row[4]).replace(',', '.')) || null;
-    const mt    = parseFloat(String(row[5]).replace(',', '.')) || null;
-
+    const qte   = parseNombre(row[3]);
+    const pu    = parseNombre(row[4]);
+    const mt    = parseNombre(row[5]);
     if (!desig && !num) continue;
 
     const points = (num.match(/\./g) || []).length;
